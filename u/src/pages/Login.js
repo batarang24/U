@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
-import { TextField, Button, Box, Typography, Snackbar, Alert } from '@mui/material';
+import { TextField, Button, Box, Snackbar, Alert, Typography } from '@mui/material';
 import { Link, useNavigate } from 'react-router-dom';
-import GoogleButton from '../components/GoogleButton';
 
 export default function Login() {
-  const [form, setForm] = useState({ email: '', password: '' });
+  const [form, setForm] = useState({ emailOrUserId: '', password: '' });
   const [message, setMessage] = useState({ open: false, text: '', type: '' });
   const navigate = useNavigate();
 
@@ -13,40 +12,43 @@ export default function Login() {
   };
 
   const handleSubmit = async () => {
+    if (!form.emailOrUserId || !form.password) {
+      setMessage({ open: true, text: 'All fields are required.', type: 'error' });
+      return;
+    }
+
     try {
       const response = await fetch('http://localhost:5000/login', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
       });
+
       const data = await response.json();
 
       if (response.ok) {
-        // Store JWT token in localStorage or context
-        localStorage.setItem('authToken', data.token);
+        localStorage.setItem('token', data.token);
         setMessage({ open: true, text: 'Login successful!', type: 'success' });
-        setTimeout(() => navigate('/profile'), 1500); // Redirect to profile or dashboard
+        setTimeout(() => navigate('/'), 1500);
       } else {
-        setMessage({ open: true, text: data.message || 'Login failed', type: 'error' });
+        setMessage({ open: true, text: data.message, type: 'error' });
       }
     } catch (error) {
-      setMessage({ open: true, text: 'An error occurred', type: 'error' });
+      setMessage({ open: true, text: 'An error occurred during login.', type: 'error' });
     }
   };
 
   return (
-    <Box sx={{ maxWidth: 400, mx: 'auto', mt: 5 }}>
+    <Box sx={{ maxWidth: 400, mx: 'auto', mt: 5 ,p: 3, boxShadow: 3, borderRadius: 2 }}>
       <Typography variant="h4" gutterBottom align="center">
         Login
       </Typography>
       <TextField
         label="Email or User ID"
-        name="email"
+        name="emailOrUserId"
         fullWidth
         margin="normal"
-        value={form.email}
+        value={form.emailOrUserId}
         onChange={handleChange}
       />
       <TextField
@@ -61,7 +63,6 @@ export default function Login() {
       <Button variant="contained" color="primary" fullWidth sx={{ mt: 2 }} onClick={handleSubmit}>
         Login
       </Button>
-      <GoogleButton />
       <Typography sx={{ mt: 2 }} align="center">
         Don't have an account? <Link to="/signup">Signup</Link>
       </Typography>
@@ -69,7 +70,7 @@ export default function Login() {
         Forgot your password? <Link to="/forgot-password">Reset it</Link>
       </Typography>
 
-      {/* Snackbar for messages */}
+      {/* Snackbar for feedback */}
       <Snackbar
         open={message.open}
         autoHideDuration={3000}
