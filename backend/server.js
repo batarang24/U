@@ -124,14 +124,14 @@ app.get('/profile', (req, res) => {
       }
 
       if (results.length === 0) {
-        return res.status(404).json({ message: 'Profile not found' });
-      }
-
-      const userProfile = results[0];
-      // Check if profile is complete (e.g., check if important fields are filled)
-      if (!userProfile.firstName || !userProfile.lastName || !userProfile.address) {
         return res.status(400).json({ message: 'Profile not set up' });
       }
+
+     /* const userProfile = results[0];
+      // Check if profile is complete (e.g., check if important fields are filled)
+      if (!userProfile.firstName || !userProfile.lastName || !userProfile.address) {
+       
+      }*/
 
       res.status(200).json(userProfile); // Return user profile data if profile is complete
     });
