@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import axios from 'axios';
-import { TextField, Button, Grid, Box, Typography, Paper } from '@mui/material';
+import { TextField, Button, Grid, Box, Typography, Paper, IconButton, Stack } from '@mui/material';
+import CloudUploadIcon from '@mui/icons-material/CloudUpload';
+import DeleteIcon from '@mui/icons-material/Delete';
 
 const ProfileSetup = () => {
   const [userData, setUserData] = useState({
@@ -17,11 +19,33 @@ const ProfileSetup = () => {
     passportNumber: '',
   });
 
+  const [resume, setResume] = useState(null);
   const [error, setError] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false); // New loading state
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setUserData({ ...userData, [name]: value });
+  };
+
+  const handleResumeChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.type !== 'application/pdf') {
+        setError('Only PDF files are allowed');
+        return;
+      }
+      if (file.size > 2 * 1024 * 1024) {
+        setError('File size must be less than 2 MB');
+        return;
+      }
+      setError(null);
+      setResume(file);
+    }
+  };
+
+  const removeResume = () => {
+    setResume(null);
   };
 
   const validate = () => {
@@ -35,7 +59,8 @@ const ProfileSetup = () => {
       yearsOfExperience,
       passportNumber,
     } = userData;
-
+  
+    // Checking if required fields are filled
     if (
       !firstName ||
       !lastName ||
@@ -46,8 +71,15 @@ const ProfileSetup = () => {
       !yearsOfExperience ||
       !passportNumber
     ) {
-      return 'All fields are required';
+      return 'All fields are required except for the resume.';
     }
+  
+    // Check if resume is uploaded
+    if (!resume) {
+      return 'Resume is required.';
+    }
+  
+    // Additional checks for length or formatting
     if (firstName.length < 3 || firstName.length > 25) {
       return 'First name must be between 3 and 25 characters';
     }
@@ -69,11 +101,13 @@ const ProfileSetup = () => {
     if (isNaN(yearsOfExperience) || yearsOfExperience <= 0) {
       return 'Years of experience must be a positive number';
     }
-    if (passportNumber.length>20 || passportNumber.length<=3) {
+    if (passportNumber.length > 20 || passportNumber.length <= 3) {
       return 'Invalid passport number format';
     }
-    return null;
+  
+    return null; // No error
   };
+  
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -84,24 +118,48 @@ const ProfileSetup = () => {
       return;
     }
 
+    setIsSubmitting(true); // Set loading state
+
     const token = localStorage.getItem('token');
+    const formData = new FormData();
+    Object.keys(userData).forEach((key) => {
+      formData.append(key, userData[key]);
+    });
+    if (resume) {
+      formData.append('resume', resume);
+    }
 
     axios
-      .post(
-        'http://localhost:5000/set-profile',
-        {
-          ...userData,
-          skills: userData.skills.split(',').map((s) => s.trim()),
-          interestedJobs: userData.interestedJobs.split(',').map((s) => s.trim()),
+      .post('http://localhost:5000/set-profile', formData, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data',
         },
-        { headers: { Authorization: `Bearer ${token}` } }
-      )
-      .then(() => {
-        window.location.href = '/';
       })
-      .catch((err)=>{
-        console.log(err)
+      .then(() => {
+        // Reset form and resume state upon success
+        setUserData({
+          firstName: '',
+          lastName: '',
+          address: '',
+          district: '',
+          state: '',
+          phone: '',
+          occupation: '',
+          yearsOfExperience: '',
+          skills: '',
+          interestedJobs: '',
+          passportNumber: '',
+        });
+        setResume(null);
+        localStorage.setItem('profile')
+        window.location.href = '/'; // Redirect to another page (e.g., homepage)
+      })
+      .catch((err) => {
         setError(err.response?.data?.message || 'Error setting up profile');
+      })
+      .finally(() => {
+        setIsSubmitting(false); // Set loading state to false
       });
   };
 
@@ -113,7 +171,7 @@ const ProfileSetup = () => {
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'start',
-        pt: 5, // Moves the form downward
+        pt: 5,
         px: 2,
       }}
     >
@@ -128,7 +186,6 @@ const ProfileSetup = () => {
           backgroundColor: '#ffffff',
         }}
       >
-        {/* Header Section */}
         <Box sx={{ textAlign: 'center', mb: 4 }}>
           <Typography variant="h4" sx={{ fontWeight: '700', color: '#0d47a1' }}>
             Kaam
@@ -138,7 +195,6 @@ const ProfileSetup = () => {
           </Typography>
         </Box>
 
-        {/* Form Section */}
         <form onSubmit={handleSubmit}>
           <Grid container spacing={3}>
             <Grid item xs={12}>
@@ -251,6 +307,47 @@ const ProfileSetup = () => {
                 variant="outlined"
               />
             </Grid>
+
+            {/* Cloud-like Resume Upload Section */}
+            <Grid item xs={12}>
+              <Stack direction="column" alignItems="center" spacing={2} sx={{ border: '2px dashed #0d47a1', padding: 4, borderRadius: 2 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', flexDirection: 'column', textAlign: 'center' }}>
+                  <CloudUploadIcon sx={{ fontSize: 50, color: '#0d47a1' }} />
+                  <Typography variant="body1" sx={{ color: '#0d47a1', fontWeight: '500', mt: 1 }}>
+                    <Button
+                      variant="outlined"
+                      component="label"
+                      sx={{
+                        fontWeight: '500',
+                        color: '#0d47a1',
+                        borderColor: '#0d47a1',
+                        '&:hover': { backgroundColor: '#bbdefb', borderColor: '#0d47a1' },
+                        mt: 1,
+                      }}
+                    >
+                      ADD YOUR RESUME
+                      <input type="file" hidden onChange={handleResumeChange} accept=".pdf" />
+                    </Button>
+                  </Typography>
+                </Box>
+                {resume && (
+                  <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100%' }}>
+                    <Typography variant="body2" sx={{ color: '#0d47a1', flexGrow: 1 }}>
+                      {resume.name}
+                    </Typography>
+                    <IconButton onClick={removeResume} color="error">
+                      <DeleteIcon />
+                    </IconButton>
+                  </Box>
+                )}
+              </Stack>
+              {!resume && (
+                <Typography variant="caption" sx={{ color: '#6b7280', textAlign: 'center', mt: 2 }}>
+                  Only PDF files are allowed, max size 2 MB.
+                </Typography>
+              )}
+            </Grid>
+
             <Grid item xs={12}>
               <Button
                 type="submit"
@@ -262,8 +359,9 @@ const ProfileSetup = () => {
                   color: '#ffffff',
                   '&:hover': { backgroundColor: '#083978' },
                 }}
+                disabled={isSubmitting} // Disable button when submitting
               >
-                Save Profile
+                {isSubmitting ? 'Saving Profile...' : 'Save Profile'}
               </Button>
             </Grid>
           </Grid>

@@ -41,15 +41,17 @@ const App = () => {
 
   useEffect(() => {
     const token = localStorage.getItem('token');
+    console.log(token)
     if (token) {
       axios
         .get('http://localhost:5000/profile', { headers: { Authorization: `Bearer ${token}` } })
         .then((response) =>{
           console.log('hello')
           setUser(response.data)
-          localStorage.setItem('profile')
+          localStorage.setItem('profile','yes')
         })
         .catch((err) => {
+          console.log('hhhhh')
           //window.location.href = '/profile';
           localStorage.removeItem('profile')
         });  // Remove token if invalid

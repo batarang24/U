@@ -7,7 +7,7 @@ const bcrypt = require('bcryptjs');
 const connection = require('./db'); // Import the MySQL connection from db.js
 const sendEmail = require('./email');
 const multer = require('multer');
-
+const upload = multer({ dest: 'uploads/' }); 
 
 const app = express();
 const port = 5000;
@@ -107,7 +107,7 @@ app.post('/login', (req, res) => {
 // Backend Route to Get User Profile
 app.get('/profile', (req, res) => {
   const token = req.headers.authorization.split(' ')[1]; // Get token from Authorization header
-
+  console.log(token)
   if (!token) {
     return res.status(401).json({ message: 'Unauthorized' });
   }
@@ -207,7 +207,7 @@ app.post('/reset-password', (req, res) => {
   }
 });
 
-app.post('/set-profile', (req, res) => {
+app.post('/set-profile', upload.single('resume'), (req, res) => {
   const token = req.headers.authorization.split(' ')[1];
   const { firstName, lastName, address, district, state, phone, occupation, yearsOfExperience, skills, interestedJobs, passportNumber } = req.body;
 
@@ -215,6 +215,11 @@ app.post('/set-profile', (req, res) => {
 
   if (!firstName || !lastName || !address || !district || !state || !phone || !occupation || !yearsOfExperience || !skills || !interestedJobs || !passportNumber) {
     return res.status(400).json({ message: 'All fields are required.' });
+  }
+
+  // Ensure resume is uploaded
+  if (!req.file) {
+    return res.status(400).json({ message: 'Resume is required.' });
   }
 
   // Validation logic
@@ -250,8 +255,8 @@ app.post('/set-profile', (req, res) => {
     }
 
     connection.query(
-      'INSERT INTO user_profiles (userId, firstName, lastName, address, district, state, phone, occupation, yearsOfExperience, skills, interestedJobs, passportNumber) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      [decoded.userId, firstName, lastName, address, district, state, phone, occupation, yearsOfExperience, skills, interestedJobs, passportNumber],
+      'INSERT INTO user_profiles (userId, firstName, lastName, address, district, state, phone, occupation, yearsOfExperience, skills, interestedJobs, passportNumber, resumePath) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?)',
+      [decoded.userId, firstName, lastName, address, district, state, phone, occupation, yearsOfExperience, skills, interestedJobs, passportNumber, req.file.path],
       (err, results) => {
         if (err) {
           console.error("Database query error:", err); // Log database query error
@@ -264,7 +269,6 @@ app.post('/set-profile', (req, res) => {
     );
   });
 });
-
 
 // Start Server
 app.listen(port, () => {
