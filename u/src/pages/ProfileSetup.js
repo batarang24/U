@@ -152,10 +152,11 @@ const ProfileSetup = () => {
           passportNumber: '',
         });
         setResume(null);
-        localStorage.setItem('profile')
+        //localStorage.setItem('profile')
         window.location.href = '/'; // Redirect to another page (e.g., homepage)
       })
       .catch((err) => {
+        console.log(err)
         setError(err.response?.data?.message || 'Error setting up profile');
       })
       .finally(() => {

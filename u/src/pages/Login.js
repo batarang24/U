@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { TextField, Button, Box, Snackbar, Alert, Typography } from '@mui/material';
 import { Link, useNavigate } from 'react-router-dom';
+import axios from 'axios';
 
 export default function Login() {
   const [form, setForm] = useState({ emailOrUserId: '', password: '' });
@@ -29,6 +30,22 @@ export default function Login() {
       if (response.ok) {
         localStorage.setItem('token', data.token);
         setMessage({ open: true, text: 'Login successful!', type: 'success' });
+        const token = localStorage.getItem('token');
+        if (token) {
+          axios
+            .get('http://localhost:5000/profile', { headers: { Authorization: `Bearer ${token}` } })
+            .then((response) => {
+              localStorage.setItem('profile', 'yes');  
+              console.log('hh')
+              
+              // Mark profile as completed if response is successful
+            })
+            .catch((err) => {
+              
+              console.log('Error fetching profile:', err);
+              localStorage.removeItem('profile');  // If there's an error fetching profile, remove the profile flag
+            });
+        }
         navigate('/')
        
       } else {

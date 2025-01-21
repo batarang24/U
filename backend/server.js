@@ -255,16 +255,21 @@ app.post('/set-profile', upload.single('resume'), (req, res) => {
       return res.status(401).json({ message: 'Invalid token.' });
     }
 
-    connection.query('INSERT INTO user_profiles (userId, firstName, lastName, address, district, state, phone, occupation, yearsOfExperience, skills, interestedJobs, passportNumber, resume) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', 
+    connection.query(
+      'INSERT INTO user_profiles (userId, firstName, lastName, address, district, state, phone, occupation, yearsOfExperience, skills, interestedJobs, passportNumber, resumePath) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', 
       [decoded.userId, firstName, lastName, address, district, state, phone, occupation, yearsOfExperience, skills, interestedJobs, passportNumber, req.file.filename],
       (err, result) => {
         if (err) {
+          console.error('Error inserting profile data:', err); // Improved error logging
           return res.status(500).json({ message: 'Error saving profile data.' });
         }
-
-        res.status(201).json({ message: 'Profile setup complete!' });
+    
+        console.log('Profile data inserted successfully:', result); // Log success details
+        return res.status(201).json({ message: 'Profile setup complete!' });
       }
     );
+    
+
   });
 });
 
