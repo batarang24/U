@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Route, Routes, Navigate, useNavigate } from 'react-router-dom';
-import { createTheme, ThemeProvider } from '@mui/material/styles';  // Import ThemeProvider and createTheme
+import { createTheme, ThemeProvider } from '@mui/material/styles';
 import axios from 'axios';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
@@ -11,52 +11,62 @@ import ProfileSetup from './pages/ProfileSetup';
 
 const ProtectedRoute = ({ children }) => {
   const token = localStorage.getItem('token');
-  const token1 = localStorage.getItem('profile');
+  const profile = localStorage.getItem('profile');
   const navigate = useNavigate();
 
   if (!token) {
+    // If no token, redirect to login page
     return <Navigate to="/login" />;
   }
-  if (!token1) {
-    return <Navigate to="/profile"/>; 
-  }
-
-  return children;
-};
-const ProtectedPRoute = ({ children }) => {
-  const token = localStorage.getItem('token');
-  const navigate = useNavigate();
-
-  if (!token) {
+  
+  if (!profile) {
+    // If the profile is not set up, redirect to profile setup page
     return <Navigate to="/profile" />;
   }
 
-  return children;
+  return children; // If both token and profile exist, show the homepage
 };
 
+const ProtectedPRoute = ({ children }) => {
+  const token = localStorage.getItem('token');
+  const profile1=localStorage.getItem('profile')
+  const navigate = useNavigate();
+
+  if (!token) {
+    return <Navigate to="/login" />;  // If no token, redirect to login
+  }
+  if (profile1)
+  {
+    return <Navigate to="/"/>;
+  }
+
+  return children; // If token exists, allow access to Profile Setup page
+};
 
 const App = () => {
   const [user, setUser] = useState(null);
   const [darkMode, setDarkMode] = useState(false);  // State for dark mode
 
   useEffect(() => {
+    console.log(localStorage)
+    console.log('ddd')
     const token = localStorage.getItem('token');
-    console.log(token)
     if (token) {
       axios
         .get('http://localhost:5000/profile', { headers: { Authorization: `Bearer ${token}` } })
-        .then((response) =>{
-          console.log('hello')
-          setUser(response.data)
-          localStorage.setItem('profile','yes')
+        .then((response) => {
+          localStorage.setItem('profile', 'yes');  
+          console.log('hh')
+          setUser(response.data);
+          // Mark profile as completed if response is successful
         })
         .catch((err) => {
-          console.log('hhhhh')
-          //window.location.href = '/profile';
-          localStorage.removeItem('profile')
-        });  // Remove token if invalid
+          
+          console.log('Error fetching profile:', err);
+          localStorage.removeItem('profile');  // If there's an error fetching profile, remove the profile flag
+        });
     }
-  }, []);
+  },[]);
 
   const toggleTheme = () => {
     setDarkMode(!darkMode);  // Toggle between dark and light mode
@@ -70,9 +80,10 @@ const App = () => {
   });
 
   return (
-    <ThemeProvider theme={theme}>  {/* Wrap your app in ThemeProvider */}
+    <ThemeProvider theme={theme}>
       <Router>
         <Routes>
+          {/* Homepage protected route */}
           <Route
             path="/"
             element={
@@ -81,16 +92,15 @@ const App = () => {
               </ProtectedRoute>
             }
           />
-          {/* Public Routes */}
-         
+
+          {/* Profile Setup route, only accessible if user is logged in but doesn't have a profile */}
           <Route path="/profile" element={
             <ProtectedPRoute>
               <ProfileSetup />
             </ProtectedPRoute>
-            
-            } />
-          
+          } />
 
+          {/* Public Routes */}
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />

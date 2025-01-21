@@ -20,7 +20,6 @@ app.use(bodyParser.json());
 const SECRET_KEY = process.env.SECRET_KEY || 'yourSuperSecretKey';
 
 // Signup Route
-// Signup Route
 app.post('/signup', async (req, res) => {
   const { userId, email, password } = req.body;
 
@@ -97,17 +96,26 @@ app.post('/login', (req, res) => {
 
       const token = jwt.sign({ userId: user.userId, email: user.email }, SECRET_KEY, { expiresIn: '1h' });
 
-      res.status(200).json({ message: 'Login successful!', token });
+      // Check if user has completed profile setup
+      connection.query('SELECT * FROM user_profiles WHERE userId = ?', [user.userId], (err, results) => {
+        if (err) {
+          return res.status(500).json({ message: 'Error checking profile setup.' });
+        }
+
+        const profileCompleted = results.length > 0;  // If results exist, profile is complete
+        res.status(200).json({
+          message: 'Login successful!',
+          token,
+          profileCompleted,  // Send back profile status (completed or not)
+        });
+      });
     }
   );
 });
 
-
 // Protected Route to Get User Profile
-// Backend Route to Get User Profile
 app.get('/profile', (req, res) => {
   const token = req.headers.authorization.split(' ')[1]; // Get token from Authorization header
-  console.log(token)
   if (!token) {
     return res.status(401).json({ message: 'Unauthorized' });
   }
@@ -127,17 +135,10 @@ app.get('/profile', (req, res) => {
         return res.status(400).json({ message: 'Profile not set up' });
       }
 
-     /* const userProfile = results[0];
-      // Check if profile is complete (e.g., check if important fields are filled)
-      if (!userProfile.firstName || !userProfile.lastName || !userProfile.address) {
-       
-      }*/
-
-      res.status(200).json(userProfile); // Return user profile data if profile is complete
+      res.status(200).json(results[0]); // Return user profile data if profile is complete
     });
   });
 });
-
 
 // Forgot Password Route
 app.post('/forgot-password', (req, res) => {
@@ -207,6 +208,7 @@ app.post('/reset-password', (req, res) => {
   }
 });
 
+// Profile Setup Route
 app.post('/set-profile', upload.single('resume'), (req, res) => {
   const token = req.headers.authorization.split(' ')[1];
   const { firstName, lastName, address, district, state, phone, occupation, yearsOfExperience, skills, interestedJobs, passportNumber } = req.body;
@@ -250,21 +252,17 @@ app.post('/set-profile', upload.single('resume'), (req, res) => {
 
   jwt.verify(token, SECRET_KEY, (err, decoded) => {
     if (err) {
-      console.error("JWT verification error:", err); // Log error details
-      return res.status(401).json({ message: 'Invalid or expired token' });
+      return res.status(401).json({ message: 'Invalid token.' });
     }
 
-    connection.query(
-      'INSERT INTO user_profiles (userId, firstName, lastName, address, district, state, phone, occupation, yearsOfExperience, skills, interestedJobs, passportNumber, resumePath) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?)',
-      [decoded.userId, firstName, lastName, address, district, state, phone, occupation, yearsOfExperience, skills, interestedJobs, passportNumber, req.file.path],
-      (err, results) => {
+    connection.query('INSERT INTO user_profiles (userId, firstName, lastName, address, district, state, phone, occupation, yearsOfExperience, skills, interestedJobs, passportNumber, resume) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', 
+      [decoded.userId, firstName, lastName, address, district, state, phone, occupation, yearsOfExperience, skills, interestedJobs, passportNumber, req.file.filename],
+      (err, result) => {
         if (err) {
-          console.error("Database query error:", err); // Log database query error
-          return res.status(500).json({ message: 'Error inserting profile' });
+          return res.status(500).json({ message: 'Error saving profile data.' });
         }
 
-        console.log("Database query results:", results); // Log query results to check if the insert was successful
-        res.status(200).json({ message: 'Profile setup successfully!' });
+        res.status(201).json({ message: 'Profile setup complete!' });
       }
     );
   });
@@ -272,5 +270,5 @@ app.post('/set-profile', upload.single('resume'), (req, res) => {
 
 // Start Server
 app.listen(port, () => {
-  console.log(`Server is running on http://localhost:${port}`);
+  console.log(`Server is running on port ${port}`);
 });

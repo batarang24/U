@@ -29,7 +29,8 @@ export default function Login() {
       if (response.ok) {
         localStorage.setItem('token', data.token);
         setMessage({ open: true, text: 'Login successful!', type: 'success' });
-        setTimeout(() => navigate('/'), 1500);
+        navigate('/')
+       
       } else {
         setMessage({ open: true, text: data.message, type: 'error' });
       }
